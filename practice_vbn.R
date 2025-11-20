@@ -1,5 +1,5 @@
 if(!require("pacman")) install.packages("pacman")
-pacman::p_load("tidyverse", "sf", "mapview")
+pacman::p_load("tidyverse", "sf", "mapview", "gridExtra")
 
 vbnCityData <- 
 st_read("https://egisdata.baltimorecity.gov/egis/rest/services/Housing/DHCD_Open_Baltimore_Datasets/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson")
@@ -43,6 +43,11 @@ vbnMap <-
   labs(title = "VBN Units in Baltimore City",
        fill = "VBN Units")
 
-c(vbnPerAreaMap, vbnMap)
+plot(csaBoundariesIntersected["vbnsPerArea"])
 
-ggsave("vbn_per_area_map.png", c(vbnPerAreaMap, vbnMap), width = 16, height = 6)
+gridExtra::grid.arrange(vbnPerAreaMap, vbnMap, ncol = 2)
+
+ggsave("vbn_per_area_map.png", 
+        gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2), 
+        width = 16, height = 6)
+
