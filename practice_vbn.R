@@ -16,3 +16,33 @@ class(vbnCityData)
 
 vbnPerCsa <- st_intersects(csaBoundaries, vbnCityData)
 mapView(vbnPerCsa)
+
+csaBoundariesIntersected <- csaBoundaries %>%
+  mutate(vbns = 
+            lengths(st_intersects(csaBoundaries, vbnCityData)),
+         vbnsPerArea = vbns / Shape__Area * 1000000)
+
+
+intersections <-
+    lengths(st_intersects(csaBoundaries, vbnCityData))
+
+mapview(csaBoundariesIntersected, zcol = "vbns")
+
+vbnPerAreaMap <-
+  ggplot() +
+  geom_sf(data = csaBoundariesIntersected, aes(fill = vbnsPerArea)) +
+  scale_fill_viridis_c() +
+  theme_minimal() +
+  labs(title = "VBN Units per CSA Area",
+       fill = "VBNs per sq km")
+
+vbnMap <-
+  ggplot() +
+  geom_sf(data = csaBoundariesIntersected, aes(fill = vbns)) +
+  theme_minimal() +
+  labs(title = "VBN Units in Baltimore City",
+       fill = "VBN Units")
+
+c(vbnPerAreaMap, vbnMap)
+
+ggsave("vbn_per_area_map.png", c(vbnPerAreaMap, vbnMap), width = 16, height = 6)
