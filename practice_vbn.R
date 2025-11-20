@@ -51,3 +51,4 @@ ggsave("vbn_per_area_map.png",
         gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2), 
         width = 16, height = 6)
 
+# Read in 21CCI Vacant Building Sentiment data
