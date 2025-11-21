@@ -1,5 +1,11 @@
+# SCRIPT START ----
 if(!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse", "sf", "mapview", "gridExtra")
+
+load(".RData")
+# -----------------
+
+
 
 vbnCityData <- 
 st_read("https://egisdata.baltimorecity.gov/egis/rest/services/Housing/DHCD_Open_Baltimore_Datasets/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson")
