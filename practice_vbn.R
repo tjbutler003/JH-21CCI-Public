@@ -52,3 +52,10 @@ ggsave("vbn_per_area_map.png",
         width = 16, height = 6)
 
 # Read in 21CCI Vacant Building Sentiment data
+load("BAS_data/baltimore-area-survey-2023.Rdata")
+View(bas23)
+load("BAS_data/baltimore-area-survey-2024.Rdata")
+View(bas24)
+
+
+save.image()
