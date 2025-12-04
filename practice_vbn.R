@@ -65,3 +65,30 @@ View(bas24)
 
 
 save.image()
+
+# Neighborhood satisfaction: bas23_nhd_sat
+# Neighborhood change: bas23_nhd_chg
+# Neighbors do not share same values: bas23_nhd_cohes5
+
+# BAS 24 Vacant building questions:
+# bas24_nhd_pdvbldg
+# bas24_nhd_pdvlot
+
+ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+geom_bar()
+
+# Recode vacant building/lot problem: 1 = Somewhat of a problem or big problem
+bas24 <-
+mutate(bas24,
+       vbldg_binary = 
+        ifelse(bas24_nhd_pdvbldg %in% c("Somewhat of a problem","A big problem"),
+          1, 0),
+       vlot_binary =
+        ifelse(bas24_nhd_pdvlot %in% c("Somewhat of a problem", "A big problem"),
+        1, 0))
+
+# Weight responses in order to show by CSA
+
+
+
+save.image()
