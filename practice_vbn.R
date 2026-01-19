@@ -86,6 +86,27 @@ vac_bldg <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) +
 gridExtra::grid.arrange(vac_lot, vac_bldg, ncol = 2)
 # *********************************************************
 
+# INCLUDE IN QUARTO MARKDOWN - CROSS TAB W/ DEMOGRAPHIC INFO ----
+vac_lot_race <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 24 Vac Lot Sentiment") + facet_wrap(~bas24_dem_raceeth4)
+
+vac_bldg_race <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 24 Vac Bldg Sentiment") + facet_wrap(~bas24_dem_raceeth4)
+
+vac_lot_sex <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 24 Vac Lot Sentiment") + facet_wrap(~bas24_dem_gender)
+  
+
+vac_bldg_sex <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 24 Vac Bldg Sentiment") + facet_wrap(~bas24_dem_gender)
+
+
+# ***************************************************************
+
 
 # Recode vacant building/lot problem sentiment:
 # 1 = 'Somewhat of a problem' or 'big problem'
@@ -101,7 +122,7 @@ mutate(bas24,
         1, 0))
 
 # Weight responses in order to show by CSA
-
+bassvy <- svydesign(~1, weights = ~bas24_svy_fwgt, data = bas24)
 
 
 save.image()
