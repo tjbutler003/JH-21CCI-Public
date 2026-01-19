@@ -1,6 +1,6 @@
 # SCRIPT START ----
 if(!require("pacman")) install.packages("pacman")
-pacman::p_load("tidyverse", "sf", "mapview", "gridExtra")
+pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey")
 
 load(".RData")
 # -----------------
@@ -17,11 +17,10 @@ st_read("https://services1.arcgis.com/UWYHeuuJISiGmgXx/arcgis/rest/services/Comm
 View(vbnCityData)
 mapview(vbnCityData)
 mapview(csaBoundaries)
+# INCLUDE IN QUARTO MARKDOWN - View of CSA and VBN points ----
 mapview(csaBoundaries) + mapview(vbnCityData, cex = 2, col.regions = "red")
+# ************************************************************
 class(vbnCityData)
-
-vbnPerCsa <- st_intersects(csaBoundaries, vbnCityData)
-mapView(vbnPerCsa)
 
 csaBoundariesIntersected <- csaBoundaries %>%
   mutate(vbns = 
@@ -51,7 +50,10 @@ vbnMap <-
 
 plot(csaBoundariesIntersected["vbnsPerArea"])
 
+# INCLUDE IN QUARTO MARKDOWN - VBN's per CSA and VBN's per CSA area ----
 gridExtra::grid.arrange(vbnPerAreaMap, vbnMap, ncol = 2)
+# **********************************************************************
+
 
 ggsave("vbn_per_area_map.png", 
         gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2), 
@@ -63,9 +65,6 @@ View(bas23)
 load("BAS_data/baltimore-area-survey-2024.Rdata")
 View(bas24)
 
-
-save.image()
-
 # Neighborhood satisfaction: bas23_nhd_sat
 # Neighborhood change: bas23_nhd_chg
 # Neighbors do not share same values: bas23_nhd_cohes5
@@ -73,11 +72,25 @@ save.image()
 # BAS 24 Vacant building questions:
 # bas24_nhd_pdvbldg
 # bas24_nhd_pdvlot
+# NOTE: NO VACANT LOT/BLDG QUESTIONS IN BAS23!!
 
-ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
-geom_bar()
+# INCLUDE IN QUARTO MARKDOWN - BAS sentiment histogram ----
+vac_lot <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 24 Vac Lot Sentiment")
 
-# Recode vacant building/lot problem: 1 = Somewhat of a problem or big problem
+vac_bldg <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 24 Vac Bldg Sentiment")
+
+gridExtra::grid.arrange(vac_lot, vac_bldg, ncol = 2)
+# *********************************************************
+
+
+# Recode vacant building/lot problem sentiment:
+# 1 = 'Somewhat of a problem' or 'big problem'
+# 0 = 'Not a problem at all' or 'Not much of a problem'
+
 bas24 <-
 mutate(bas24,
        vbldg_binary = 
