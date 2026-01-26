@@ -1,6 +1,8 @@
 # SCRIPT START ----
 if(!require("pacman")) install.packages("pacman")
-pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey")
+pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey", "devtools",
+               "ggmosaic")
+#devtools::install_github("haleyjeppson/ggmosaic")
 
 load(".RData")
 # -----------------
@@ -54,7 +56,6 @@ plot(csaBoundariesIntersected["vbnsPerArea"])
 gridExtra::grid.arrange(vbnPerAreaMap, vbnMap, ncol = 2)
 # **********************************************************************
 
-
 ggsave("vbn_per_area_map.png", 
         gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2), 
         width = 16, height = 6)
@@ -64,48 +65,125 @@ load("BAS_data/baltimore-area-survey-2023.Rdata")
 View(bas23)
 load("BAS_data/baltimore-area-survey-2024.Rdata")
 View(bas24)
+load("BAS_data/baltimore-area-survey-2025.Rdata")
+View(bas25)
 
 # Neighborhood satisfaction: bas23_nhd_sat
 # Neighborhood change: bas23_nhd_chg
 # Neighbors do not share same values: bas23_nhd_cohes5
 
-# BAS 24 Vacant building questions:
-# bas24_nhd_pdvbldg
-# bas24_nhd_pdvlot
-# NOTE: NO VACANT LOT/BLDG QUESTIONS IN BAS23!!
+
+
 
 # INCLUDE IN QUARTO MARKDOWN - BAS sentiment histogram ----
-vac_lot <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
+vac_lot24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
-  labs(x="BAS 24 Vac Lot Sentiment")
+  labs(x="BAS 24 Vac Lot Sentiment") + ylim(c(0,1000))
 
-vac_bldg <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+vac_bldg24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
-  labs(x="BAS 24 Vac Bldg Sentiment")
+  labs(x="BAS 24 Vac Bldg Sentiment") + ylim(c(0,1000))
 
-gridExtra::grid.arrange(vac_lot, vac_bldg, ncol = 2)
+vac_bldg25 <- ggplot(data = bas25, mapping = aes(x = bas25_nhd_pbvbld)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 25 Vac Bldg Sentiment") + ylim(c(0,1000))
+
+gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 # *********************************************************
 
 # INCLUDE IN QUARTO MARKDOWN - CROSS TAB W/ DEMOGRAPHIC INFO ----
-vac_lot_race <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
+vac_lot_race24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
   labs(x="BAS 24 Vac Lot Sentiment") + facet_wrap(~bas24_dem_raceeth4)
 
-vac_bldg_race <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+vac_bldg_race24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
   labs(x="BAS 24 Vac Bldg Sentiment") + facet_wrap(~bas24_dem_raceeth4)
 
-vac_lot_sex <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
+vac_bldg_race25 <- ggplot(data = bas25, mapping = aes(x = bas25_nhd_pbvbld)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 25 Vac Bldg Sentiment") + facet_wrap(~bas25_dem_raceeth4)
+
+vac_lot_sex24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
   labs(x="BAS 24 Vac Lot Sentiment") + facet_wrap(~bas24_dem_gender)
   
 
-vac_bldg_sex <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
+vac_bldg_sex24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
   labs(x="BAS 24 Vac Bldg Sentiment") + facet_wrap(~bas24_dem_gender)
 
+vac_bldg_sex25 <- ggplot(data = bas25, mapping = aes(x = bas25_nhd_pbvbld)) + 
+  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS 25 Vac Bldg Sentiment") + facet_wrap(~bas25_dem_gender)
 
 # ***************************************************************
+
+
+
+# BAS 24 ----
+# BAS 24 Vacant building questions:
+# nhd_pdvbldg
+# nhd_pdvlot
+# *********************************
+# BAS 24 other Q's:
+# nhd_walksafe - feel safe walking after dark
+# nhd_sat - neighborhood satisfaction
+
+
+# BAS 25 ----
+# BAS 25 Q's to include:
+# nhd_sat - neighborhood satisfactions
+# nhd_safe - neighborhood safety
+# nhd_sat - Neighborhood satisfaction
+# nhd_newres - Neighborhood is welcoming
+# nhd_walksafe - Feel safe walking after dark
+# nhd_wratt - Worry about being attacked
+# nhd_wrbkhm - Worry about break-in at home
+# nhd_pbdrugs - Drug use in neighborhood
+# nhd_pbod - Drug overdoses
+# nhd_pbdsale - Drug sales
+
+# VACANTS Q'S ***
+# nhd_pbvbld - Vacant buildings in neighborhood
+# con_pbvbld - Vacant buildings in jurisdiction (City or county)
+# ***************
+
+# INCLUDE IN QUARTO MARKDOWN - Association between Vacant Building and other
+# neighborhood indicators
+table(bas24$bas24_nhd_walksafe, bas24$bas24_nhd_pdvbldg)
+bas24_vac_blg_vs_walksafe <- bas24 %>% 
+  select(bas24_nhd_pdvbldg, bas24_nhd_walksafe) %>% 
+  group_by(bas24_nhd_pdvbldg) %>% 
+  count(bas24_nhd_walksafe)
+
+# Grouped bar plot
+ggplot(data = bas24_vac_blg_vs_walksafe, 
+       aes(x = bas24_nhd_pdvbldg, y = n, fill = bas24_nhd_walksafe)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  ylab("Frequency") + xlab("Vacant Building Sentiment") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  ggtitle("Bar chart of safe walking sentiment by vacant building sentiment")
+
+# Mosaic plot - relative frequencies by vacant building sentiment
+ggplot(data = bas24) +
+  ggmosaic::geom_mosaic(aes(x = product(bas24_nhd_pdvbldg), 
+                            fill = bas24_nhd_walksafe)) + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.8))
+# **************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Recode vacant building/lot problem sentiment:
@@ -122,7 +200,7 @@ mutate(bas24,
         1, 0))
 
 # Weight responses in order to show by CSA
-bassvy <- svydesign(~1, weights = ~bas24_svy_fwgt, data = bas24)
+bassvy24 <- svydesign(~1, weights = ~bas24_svy_fwgt, data = bas24)
 
 
 save.image()
