@@ -13,7 +13,7 @@ execute:
 
 if(!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey", "devtools",
-               "ggmosaic")
+               "ggmosaic", "basemaps", "tidycensus")
 
 vbnCityData <- 
 st_read("https://egisdata.baltimorecity.gov/egis/rest/services/Housing/DHCD_Open_Baltimore_Datasets/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson")
@@ -26,13 +26,15 @@ load("BAS_data/baltimore-area-survey-2024.Rdata")
 load("BAS_data/baltimore-area-survey-2025.Rdata")
 ```
 
-## MapView of VBN's as points
+## Baseplot of VBN's as points
 
 ```{r}
-#| label: MapView
+#| label: Basemap Practice
 #| eval: false
 
-mapview(csaBoundaries) + mapview(vbnCityData, cex = 2, col.regions = "red")
+ggplot(vbnCityData) +
+  geom_sf()
+
 ```
 
 
@@ -43,6 +45,11 @@ mapview(csaBoundaries) + mapview(vbnCityData, cex = 2, col.regions = "red")
 # Want to add in VBN's per 1000 housing units or something like that
 # Use tidycensus to get census tract and ACS data to get this number
 # Balt City has real property geo info but ACS has already done the work
+acsData <- get_acs(geography = "tract", state = "MD", county = "Baltimore city",
+                   table = "DP04", year = 2024)
+
+
+
 
 csaBoundariesIntersected <- csaBoundaries %>%
   mutate(vbns = 
