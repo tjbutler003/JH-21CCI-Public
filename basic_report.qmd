@@ -40,6 +40,10 @@ mapview(csaBoundaries) + mapview(vbnCityData, cex = 2, col.regions = "red")
 ```{r}
 #| label: Mapping Per Area
 
+# Want to add in VBN's per 1000 housing units or something like that
+# Use tidycensus to get census tract and ACS data to get this number
+# Balt City has real property geo info but ACS has already done the work
+
 csaBoundariesIntersected <- csaBoundaries %>%
   mutate(vbns = 
             lengths(st_intersects(csaBoundaries, vbnCityData)),
@@ -72,6 +76,8 @@ gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2)
 ```{r}
 #| label: BAS Sentiment Histogram
 
+# Percentage not frequency of responses
+
 vac_lot24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
   geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
   labs(x="BAS 24 Vac Lot Sentiment") + ylim(c(0,1000))
@@ -86,6 +92,15 @@ vac_bldg25 <- ggplot(data = bas25, mapping = aes(x = bas25_nhd_pbvbld)) +
 
 gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```
+
+
+## Distribution of VBN's per XX stratified by Vacant Building Sentiment Response: 24 25
+```{r}
+#| label: VBN by vacant building sentiment cross-tab
+
+```
+
+
 
 
 ## Demographic Cross Tabs
