@@ -14,7 +14,11 @@ execute:
 if(!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey", "devtools",
                "ggmosaic", "basemaps", "tidycensus")
+```
 
+```{r}
+#| label: setup2
+#| include: false
 vbnCityData <- 
 st_read("https://egisdata.baltimorecity.gov/egis/rest/services/Housing/DHCD_Open_Baltimore_Datasets/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson")
 
@@ -46,7 +50,33 @@ ggplot(vbnCityData) +
 # Use tidycensus to get census tract and ACS data to get this number
 # Balt City has real property geo info but ACS has already done the work
 acsData <- get_acs(geography = "tract", state = "MD", county = "Baltimore city",
-                   table = "DP04", year = 2024)
+                   table = "DP04", year = 2024, geometry = T, survey = "acs1")
+
+acs_data_vacants <- acsData %>% 
+  filter(variable %in% c("DP04_0001","DP04_0003")) %>% 
+  select(-moe) %>% 
+  pivot_wider(names_from = "variable", values_from = "estimate") %>% 
+  mutate(vacants_per_1000 = DP04_0003/DP04_0001*1000)
+  
+
+
+
+
+
+
+ggplot(acs_data_vacants) +
+  geom_sf()
+
+
+plot(acs_data_vacants["vacants_per_1000"])
+
+
+
+
+
+
+
+
 
 
 
@@ -84,18 +114,36 @@ gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2)
 #| label: BAS Sentiment Histogram
 
 # Percentage not frequency of responses
+bas24_vac_lot <- bas24 %>%
+  count(bas24_nhd_pdvlot) %>% 
+  mutate(Percent = round(n / nrow(bas24) * 100, 1))
 
-vac_lot24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvlot)) + 
-  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
-  labs(x="BAS 24 Vac Lot Sentiment") + ylim(c(0,1000))
+bas24_vac_bldg <- bas24 %>% 
+  count(bas24_nhd_pdvbldg) %>% 
+  mutate(Percent = round(n / nrow(bas24) * 100, 1))
 
-vac_bldg24 <- ggplot(data = bas24, mapping = aes(x = bas24_nhd_pdvbldg)) + 
-  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
-  labs(x="BAS 24 Vac Bldg Sentiment") + ylim(c(0,1000))
+bas25_vac_bldg <- bas25 %>% 
+  count(bas25_nhd_pbvbld) %>% 
+  mutate(Percent = round(n / nrow(bas25) * 100, 1))
 
-vac_bldg25 <- ggplot(data = bas25, mapping = aes(x = bas25_nhd_pbvbld)) + 
-  geom_bar() + theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
-  labs(x="BAS 25 Vac Bldg Sentiment") + ylim(c(0,1000))
+vac_lot24 <- ggplot(data = bas24_vac_lot, 
+                    mapping = aes(x = bas24_nhd_pdvlot, y = Percent)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS24 Vac Lot") + ylim(c(0,60))
+
+vac_bldg24 <- ggplot(data = bas24_vac_bldg, 
+                     mapping = aes(x = bas24_nhd_pdvbldg, 
+                                   y = Percent)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS24 Vac Bldg") + ylim(c(0,60))
+
+vac_bldg25 <- ggplot(data = bas25_vac_bldg, 
+                     mapping = aes(x = bas25_nhd_pbvbld, y = Percent)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.8)) + 
+  labs(x="BAS25 Vac Bldg") + ylim(c(0,60))
 
 gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```
