@@ -15,6 +15,10 @@ if(!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey", "devtools",
                "ggmosaic", "basemaps", "tidycensus", "tmap", "basemaps",
                "maptiles", "tidygeocoder")
+
+# Get basemap using maptiles
+osm_tiles <- get_tiles(vbnCityData, provider = "OpenStreetMap",
+                       zoom = 12, crop = T, cachedir = "osm_tiles")
 ```
 
 ```{r}
@@ -30,9 +34,12 @@ load("BAS_data/baltimore-area-survey-2023.Rdata")
 load("BAS_data/baltimore-area-survey-2024.Rdata")
 load("BAS_data/baltimore-area-survey-2025.Rdata")
 
-# Get basemap using maptiles
-osm_tiles <- get_tiles(vbnCityData, provider = "OpenStreetMap",
-                       zoom = 12, crop = T, cachedir = "osm_tiles")
+#Filter down to city for BAS24 and 25
+bas24 <- bas24 %>% 
+  filter(bas24_svy_cty == "City")
+
+bas25 <- bas25 %>% 
+  filter(bas25_svy_cty == "City")
 
 # Set up Census API key - already set up
 #census_api_key("b2cedbd221d7cb2c24f7f90d54ab3e3d79bdf929", install = T)
@@ -49,6 +56,7 @@ st_crs(acsData)
 acs_vacant_per_1k_blds <- acsData %>% 
   mutate(vacant_num = lengths(st_intersects(acsData, vbnCityData)),
          vacant_per_1k_bldg = round(vacant_num / estimate * 1000))
+
 ```
 
 ## Baseplot of VBN's as points
@@ -71,40 +79,18 @@ tm_shape(osm_tiles) +
 ### Using VBN notices from Baltimore City Open Data
 
 ```{r}
-#| label: Mapping Per Area
+#| label: Mapping VBNs per 1000 buildings
 
 # Want to add in VBN's per 1000 housing units or something like that
 # Use tidycensus to get census tract and ACS data to get this number
 # Balt City has real property geo info but ACS has already done the work
 
-
-
-
-
-csaBoundariesIntersected <- csaBoundaries %>%
-  mutate(vbns = 
-            lengths(st_intersects(csaBoundaries, vbnCityData)),
-         vbnsPerArea = vbns / Shape__Area * 1000000)
-
-intersections <-
-    lengths(st_intersects(csaBoundaries, vbnCityData))
-
-vbnPerAreaMap <-
-  ggplot() +
-  geom_sf(data = csaBoundariesIntersected, aes(fill = vbnsPerArea)) +
-  scale_fill_viridis_c() +
-  theme_minimal() +
-  labs(title = "VBN Units per CSA Area",
-       fill = "VBNs per sq km")
-
-vbnMap <-
-  ggplot() +
-  geom_sf(data = csaBoundariesIntersected, aes(fill = vbns)) +
-  theme_minimal() +
-  labs(title = "VBN Units in Baltimore City",
-       fill = "VBN Units")
-
-gridExtra::grid.arrange(vbnMap, vbnPerAreaMap, ncol = 2)
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_shape(acs_vacant_per_1k_blds) +
+  tm_polygons(fill = "vacant_per_1k_bldg",
+              fill.scale = tm_scale(),
+              fill_alpha = 0.5)
 ```
 
 ## BAS Sentiment Histogram
@@ -147,12 +133,46 @@ vac_bldg25 <- ggplot(data = bas25_vac_bldg,
 gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```
 
-## Distribution of VBN's per XX stratified by Vacant Building Sentiment Response: 24 25
+## Distribution of VBN's per 1000 buildings stratified by Vacant Building Sentiment Response: 24 25
 
 ```{r}
 #| label: VBN by vacant building sentiment cross-tab
 
+# Merge vacant buildings per 1000 TO bas data
+bas24_acs_joined <- 
+  left_join(bas24, acs_vacant_per_1k_blds, join_by(bas24_svy_geoid == GEOID))
+
+
+
+ggplot(bas24_acs_joined) +
+  geom_histogram(aes(x = vacant_per_1k_bldg))
+
+ggplot(bas24_acs_joined) +
+  geom_histogram(aes(x = vacant_per_1k_bldg)) +
+  facet_wrap(~bas24_nhd_pdvbldg)
+
 ```
+## Mapping the different responses: where do people live?
+
+```{r}
+#| label: Maps of response categories for BAS24
+
+# Getting counts of Census Tract by response category
+bas24_ct_counts <- bas24_acs_joined %>% 
+  group_by(bas24_nhd_pdvbldg, bas24_svy_geoid, geometry) %>% 
+  summarize(count = n()) %>% 
+  st_sf(.)
+
+class(bas24_ct_counts)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_shape(bas24_ct_counts) +
+  tm_polygons(fill = "count") +
+  tm_facets_wrap(by = "bas24_nhd_pdvbldg")
+```
+
+
 
 ## Demographic Cross Tabs
 
