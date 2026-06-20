@@ -30,6 +30,11 @@ st_read("https://egisdata.baltimorecity.gov/egis/rest/services/Housing/DHCD_Open
 csaBoundaries <- 
 st_read("https://services1.arcgis.com/UWYHeuuJISiGmgXx/arcgis/rest/services/Community_Statistical_Areas_(CSAs)__Reference_Boundaries_new/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson")
 
+tract_to_csa <- 
+  st_read("https://services1.arcgis.com/mVFRs7NF4iFitgbY/arcgis/rest/services/Tract2020_to_CSA2020/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson") %>%
+  as.data.frame(.) %>% select(-geometry) %>% 
+  filter(Community_Statistical_Area_2020 != "Unassigned -- Jail")
+
 load("BAS_data/baltimore-area-survey-2023.Rdata")
 load("BAS_data/baltimore-area-survey-2024.Rdata")
 load("BAS_data/baltimore-area-survey-2025.Rdata")
@@ -57,6 +62,29 @@ acs_vacant_per_1k_blds <- acsData %>%
   mutate(vacant_num = lengths(st_intersects(acsData, vbnCityData)),
          vacant_per_1k_bldg = round(vacant_num / estimate * 1000))
 
+# Mapping census tract to CSA
+acs_to_csa <- left_join(acs_vacant_per_1k_blds, tract_to_csa, 
+                        join_by(GEOID == GEOID_Tract_2020)) %>% 
+  filter(!is.na(Tract_2020)) %>% 
+  group_by(Community_Statistical_Area_2020) %>% 
+  summarize(num_blds = sum(estimate),
+            vacant_num = sum(vacant_num)) %>% 
+  mutate(vac_bldg_per_1k = round(vacant_num / num_blds * 1000),
+         quartile = case_when(
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.25) ~ 1,
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.5) ~ 2,
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.75) ~ 3,
+           T ~ 4
+         ),
+         quintile = case_when(
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.2) ~ 1,
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.4) ~ 2,
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.6) ~ 3,
+           vac_bldg_per_1k <= quantile(vac_bldg_per_1k, 0.8) ~ 4,
+           T ~ 5
+         ))
+
+
 ```
 
 ## Baseplot of VBN's as points
@@ -65,13 +93,15 @@ acs_vacant_per_1k_blds <- acsData %>%
 #| label: Basemap Practice
 #| eval: false
 
+
+# NOTES: Dot density - 1 dot = X>1 buildings for example
 tm_shape(osm_tiles) +
   tm_title("Vacant Building Notices overlaying CSAs") +
   tm_rgb() +
   tm_shape(csaBoundaries) +
   tm_polygons(fill_alpha = 0.6) +
   tm_shape(vbnCityData) +
-  tm_dots(size = 0.1, fill_alpha = 0.5)
+  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.05)
 ```
 
 ## VBN's per 1000 buildings
@@ -81,9 +111,7 @@ tm_shape(osm_tiles) +
 ```{r}
 #| label: Mapping VBNs per 1000 buildings
 
-# Want to add in VBN's per 1000 housing units or something like that
-# Use tidycensus to get census tract and ACS data to get this number
-# Balt City has real property geo info but ACS has already done the work
+# Used ACS For # buildings, VBN from open baltimore for vacant building count
 
 tm_shape(osm_tiles) +
   tm_rgb() +
@@ -91,6 +119,10 @@ tm_shape(osm_tiles) +
   tm_polygons(fill = "vacant_per_1k_bldg",
               fill.scale = tm_scale(),
               fill_alpha = 0.5)
+
+tm_shape(acs_to_csa) +
+  tm_polygons(fill_alpha = 0.6,
+              fill = "vac_bldg_per_1k")
 ```
 
 ## BAS Sentiment Histogram
@@ -98,7 +130,7 @@ tm_shape(osm_tiles) +
 ```{r}
 #| label: BAS Sentiment Histogram
 
-# Percentage not frequency of responses
+# Percentage of response option
 bas24_vac_lot <- bas24 %>%
   count(bas24_nhd_pdvlot) %>% 
   mutate(Percent = round(n / nrow(bas24) * 100, 1))
@@ -138,7 +170,7 @@ gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```{r}
 #| label: VBN by vacant building sentiment cross-tab
 
-# Merge vacant buildings per 1000 TO bas data
+# Merge vacant buildings per 1000 TO bas data: Census Tract
 bas24_acs_joined <- 
   left_join(bas24, acs_vacant_per_1k_blds, join_by(bas24_svy_geoid == GEOID))
 
@@ -151,25 +183,103 @@ ggplot(bas24_acs_joined) +
   geom_histogram(aes(x = vacant_per_1k_bldg)) +
   facet_wrap(~bas24_nhd_pdvbldg)
 
+
+# Vacant buildings per 1000: CSA level
+bas24_csa_joined <- 
+  left_join(bas24, acs_to_csa, 
+            join_by(bas24_svy_csaid == Community_Statistical_Area_2020))
+
+ggplot(bas24_csa_joined) +
+  geom_histogram(aes(x = vac_bldg_per_1k))
+
+ggplot(bas24_csa_joined) +
+  geom_histogram(aes(x = vac_bldg_per_1k)) +
+  facet_wrap(~bas24_nhd_pdvbldg)
+
+# BAS 25
+bas25_csa_joined <-
+  left_join(bas25, acs_to_csa,
+            join_by(bas25_svy_csaid == Community_Statistical_Area_2020))
+
+ggplot(bas25_csa_joined) +
+  geom_histogram(aes(x = vac_bldg_per_1k))
+
+ggplot(bas25_csa_joined) +
+  geom_histogram(aes(x = vac_bldg_per_1k)) +
+  facet_wrap(~bas25_nhd_pbvbld)
+
+# Discordant responses - high vacants/not a problem, low vacants/major problem
+# NOTES: Take CSA's in top quartile of # vbn's, look at distribution of responses
+# Code response values as 1 through 4 or 5
+# Plot correlation of vbn quartile and response code 1-5, select discordant
+# section of graph
+# Even if no mismatch, how do VBN counts affect things like safety, trust in gov,
+# other survey data questions
+bas24_low_vac_big_prob <- bas24_csa_joined %>% 
+  filter(bas24_nhd_pdvbldg == "A big problem" & quartile == 1) %>% 
+  st_as_sf(.)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_shape(bas24_low_vac_big_prob) +
+  tm_polygons()
+
+bas24_hi_vac_lo_prob <- bas24_csa_joined %>% 
+  filter(bas24_nhd_pdvbldg == "Not a problem at all" & quartile == 4) %>% 
+  st_as_sf(.)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_shape(bas24_hi_vac_lo_prob) +
+  tm_polygons()
 ```
+
+## Discordant Values Search
+```{r}
+# Helpful to label # vacants in each quintile??
+bldg_sent24_vs_quartile_vbn <- bas24_csa_joined %>%
+  filter(!str_detect(bas24_nhd_pdvbldg, "Missing")) %>% 
+  group_by(bas24_nhd_pdvbldg, quartile) %>% 
+  count()
+
+ggplot(bldg_sent24_vs_quartile_vbn, 
+       aes(x = bas24_nhd_pdvbldg, y = quartile, fill = n)) +
+  geom_tile()
+
+bldg_sent25_vs_quintile_vbn <- bas25_csa_joined %>% 
+  filter(!str_detect(bas25_nhd_pbvbld, "Missing")) %>% 
+  group_by(bas25_nhd_pbvbld, quintile) %>% 
+  count()
+
+ggplot(bldg_sent25_vs_quintile_vbn, 
+       aes(x = bas25_nhd_pbvbld, y = quintile, fill = n)) +
+  geom_tile()
+```
+
+
+
+
 ## Mapping the different responses: where do people live?
 
 ```{r}
 #| label: Maps of response categories for BAS24
 
+# NOTES: Merge in VBN dot density map to bring in actual vacant lot viz data
+
 # Getting counts of Census Tract by response category
-bas24_ct_counts <- bas24_acs_joined %>% 
-  group_by(bas24_nhd_pdvbldg, bas24_svy_geoid, geometry) %>% 
+bas24_csa_counts <- bas24_csa_joined %>% 
+  group_by(bas24_nhd_pdvbldg, bas24_svy_csaid, geometry) %>% 
   summarize(count = n()) %>% 
   st_sf(.)
 
-class(bas24_ct_counts)
 
 tm_shape(osm_tiles) +
   tm_rgb() +
-  tm_shape(bas24_ct_counts) +
+  tm_shape(bas24_csa_counts) +
   tm_polygons(fill = "count") +
-  tm_facets_wrap(by = "bas24_nhd_pdvbldg")
+  tm_facets_wrap(by = "bas24_nhd_pdvbldg") +
+  tm_shape(vbnCityData) +
+  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.05)
 ```
 
 
@@ -209,7 +319,7 @@ vac_bldg_sex25 <- ggplot(data = bas25, mapping = aes(x = bas25_nhd_pbvbld)) +
   labs(x="BAS 25 Vac Bldg Sentiment") + facet_wrap(~bas25_dem_gender)
 ```
 
-## Association Between Vacant Buildings and other Neighborhood Indicators
+## Association Between Vacant Buildings and other Neighborhood Indicators from BAS Data
 
 ```{r}
 #| label: VBN and Other Neighborhood Indicators
