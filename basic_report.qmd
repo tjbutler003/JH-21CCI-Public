@@ -101,7 +101,7 @@ tm_shape(osm_tiles) +
   tm_shape(csaBoundaries) +
   tm_polygons(fill_alpha = 0.6) +
   tm_shape(vbnCityData) +
-  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.05)
+  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.02)
 ```
 
 ## VBN's per 1000 buildings
@@ -234,7 +234,7 @@ tm_shape(osm_tiles) +
   tm_polygons()
 ```
 
-## Discordant Values Search
+## Discordant Values Graph
 ```{r}
 # Helpful to label # vacants in each quintile??
 bldg_sent24_vs_quartile_vbn <- bas24_csa_joined %>%
@@ -256,7 +256,67 @@ ggplot(bldg_sent25_vs_quintile_vbn,
   geom_tile()
 ```
 
+## Correlation between VBN Metrics and Different Questions
+```{r}
+#| label: Reviewing correlation between VBN Count/Quartile/Quintile and Neighborhood Safety and Cohesion questions
 
+# Correlation with VBN quartile/quintile and VBN sentiment
+bas24_vbn_not_missing <- bas24_csa_joined %>% 
+  filter(!str_detect(bas24_nhd_pdvbldg,"Missing"))
+
+cor(bas24_vbn_not_missing$vac_bldg_per_1k,
+    as.numeric(bas24_vbn_not_missing$bas24_nhd_pdvbldg))
+  
+# General solution: limit dataset to non-missing values, do correlation, save
+# value with column name - loop over all variables
+# First var: bas24_nhd_sat
+i <- 3
+cur_data_missing_removed <- bas24_csa_joined %>% 
+  filter(bas24_csa_joined %>% pull(i) != "Missing: Item non-response")
+
+vac_per_1k_cor <- 
+  cor(cur_data_missing_removed$vac_bldg_per_1k,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_quartile_cor <- 
+  cor(cur_data_missing_removed$quartile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+  
+vac_quintile_cor <-
+  cor(cur_data_missing_removed$quintile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_sentiment_cor <-
+  cor(as.numeric(cur_data_missing_removed$bas24_nhd_pdvbldg),
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+cor_vars <- tibble(var_name = colnames(bas24_csa_joined)[i],
+                   num_responses = dim(cur_data_missing_removed)[i])
+
+for(i in 4:143){
+  cur_data_missing_removed <- bas24_csa_joined %>% 
+    filter(bas24_csa_joined %>% pull(i))
+  
+  vac_per_1k_cor <- 
+  cor(cur_data_missing_removed$vac_bldg_per_1k,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_quartile_cor <- 
+  cor(cur_data_missing_removed$quartile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+  
+vac_quintile_cor <-
+  cor(cur_data_missing_removed$quintile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_sentiment_cor <-
+  cor(as.numeric(cur_data_missing_removed$bas24_nhd_pdvbldg),
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+}
+
+
+
+```
 
 
 ## Mapping the different responses: where do people live?
