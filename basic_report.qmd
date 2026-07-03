@@ -14,7 +14,7 @@ execute:
 if(!require("pacman")) install.packages("pacman")
 pacman::p_load("tidyverse", "sf", "mapview", "gridExtra", "survey", "devtools",
                "ggmosaic", "basemaps", "tidycensus", "tmap", "basemaps",
-               "maptiles", "tidygeocoder")
+               "maptiles", "tidygeocoder", "openxlsx2")
 
 # Get basemap using maptiles
 osm_tiles <- get_tiles(vbnCityData, provider = "OpenStreetMap",
@@ -164,6 +164,9 @@ vac_bldg25 <- ggplot(data = bas25_vac_bldg,
 
 gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```
+## BAS 24 and 25 responses by CSA
+
+
 
 ## Distribution of VBN's per 1000 buildings stratified by Vacant Building Sentiment Response: 24 25
 
@@ -270,6 +273,8 @@ cor(bas24_vbn_not_missing$vac_bldg_per_1k,
 # General solution: limit dataset to non-missing values, do correlation, save
 # value with column name - loop over all variables
 # First var: bas24_nhd_sat
+
+# BAS 24
 i <- 3
 cur_data_missing_removed <- bas24_csa_joined %>% 
   filter(bas24_csa_joined %>% pull(i) != "Missing: Item non-response")
@@ -290,14 +295,18 @@ vac_sentiment_cor <-
   cor(as.numeric(cur_data_missing_removed$bas24_nhd_pdvbldg),
       as.numeric(cur_data_missing_removed %>% pull(i)))
 
-cor_vars <- tibble(var_name = colnames(bas24_csa_joined)[i],
-                   num_responses = dim(cur_data_missing_removed)[i])
+cor_vars_bas24 <- tibble(var_name = colnames(bas24_csa_joined)[i],
+                   num_responses = dim(cur_data_missing_removed)[1],
+                   vacants_per_1k_bldgs = vac_per_1k_cor,
+                   quartile_vacants = vac_quartile_cor,
+                   quintile_vacants = vac_quintile_cor,
+                   vacant_sentiment = vac_sentiment_cor)
 
 for(i in 4:143){
-  cur_data_missing_removed <- bas24_csa_joined %>% 
-    filter(bas24_csa_joined %>% pull(i))
-  
-  vac_per_1k_cor <- 
+cur_data_missing_removed <- bas24_csa_joined %>% 
+  filter(bas24_csa_joined %>% pull(i) != "Missing: Item non-response")
+
+vac_per_1k_cor <- 
   cor(cur_data_missing_removed$vac_bldg_per_1k,
       as.numeric(cur_data_missing_removed %>% pull(i)))
 
@@ -312,10 +321,82 @@ vac_quintile_cor <-
 vac_sentiment_cor <-
   cor(as.numeric(cur_data_missing_removed$bas24_nhd_pdvbldg),
       as.numeric(cur_data_missing_removed %>% pull(i)))
+
+cor_vars_bas24 <- add_row(cor_vars_bas24, 
+                    var_name = colnames(bas24_csa_joined)[i],
+                    num_responses = dim(cur_data_missing_removed)[1],
+                    vacants_per_1k_bldgs = vac_per_1k_cor,
+                    quartile_vacants = vac_quartile_cor,
+                    quintile_vacants = vac_quintile_cor,
+                    vacant_sentiment = vac_sentiment_cor)
 }
 
+cor_vars_bas24 <- arrange(cor_vars_bas24, desc(abs(vacants_per_1k_bldgs)))
+
+# BAS 25
+
+i <- 3
+cur_data_missing_removed <- bas25_csa_joined %>% 
+  filter(!is.na(bas25_csa_joined %>% pull(i)) & 
+           bas25_csa_joined %>% pull(i) != "Missing: Item non-response")
+
+vac_per_1k_cor <- 
+  cor(cur_data_missing_removed$vac_bldg_per_1k,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_quartile_cor <- 
+  cor(cur_data_missing_removed$quartile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+  
+vac_quintile_cor <-
+  cor(cur_data_missing_removed$quintile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_sentiment_cor <-
+  cor(as.numeric(cur_data_missing_removed$bas25_nhd_pbvbld),
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+cor_vars_bas25 <- tibble(var_name = colnames(bas25_csa_joined)[i],
+                   num_responses = dim(cur_data_missing_removed)[1],
+                   vacants_per_1k_bldgs = vac_per_1k_cor,
+                   quartile_vacants = vac_quartile_cor,
+                   quintile_vacants = vac_quintile_cor,
+                   vacant_sentiment = vac_sentiment_cor)
+
+for(i in 4:189){
+cur_data_missing_removed <- bas25_csa_joined %>% 
+  filter(bas25_csa_joined %>% pull(i) != "Missing: Item non-response")
+
+vac_per_1k_cor <- 
+  cor(cur_data_missing_removed$vac_bldg_per_1k,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_quartile_cor <- 
+  cor(cur_data_missing_removed$quartile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+  
+vac_quintile_cor <-
+  cor(cur_data_missing_removed$quintile,
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+vac_sentiment_cor <-
+  cor(as.numeric(cur_data_missing_removed$bas25_nhd_pbvbld),
+      as.numeric(cur_data_missing_removed %>% pull(i)))
+
+cor_vars_bas25 <- add_row(cor_vars_bas25, 
+                    var_name = colnames(bas25_csa_joined)[i],
+                    num_responses = dim(cur_data_missing_removed)[1],
+                    vacants_per_1k_bldgs = vac_per_1k_cor,
+                    quartile_vacants = vac_quartile_cor,
+                    quintile_vacants = vac_quintile_cor,
+                    vacant_sentiment = vac_sentiment_cor)
+}
+
+cor_vars_bas25 <- arrange(cor_vars_bas25, desc(abs(vacants_per_1k_bldgs)))
 
 
+write_xlsx(list(bas24 = cor_vars_bas24, bas25 = cor_vars_bas25),
+           "correlation_matrix_bas24_25.xlsx")
 ```
 
 
