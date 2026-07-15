@@ -28,7 +28,11 @@ vbnCityData <-
 st_read("https://egisdata.baltimorecity.gov/egis/rest/services/Housing/DHCD_Open_Baltimore_Datasets/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson")
 
 csaBoundaries <- 
-st_read("https://services1.arcgis.com/UWYHeuuJISiGmgXx/arcgis/rest/services/Community_Statistical_Areas_(CSAs)__Reference_Boundaries_new/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson")
+st_read("spatial_data/Total_Population/Total_Population.shp")
+
+csa_pop_count <- csaBoundaries %>% 
+  as.data.frame(.) %>% 
+  select(CSA2010:tpop20)
 
 tract_to_csa <- 
   st_read("https://services1.arcgis.com/mVFRs7NF4iFitgbY/arcgis/rest/services/Tract2020_to_CSA2020/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson") %>%
@@ -50,16 +54,16 @@ bas25 <- bas25 %>%
 #census_api_key("b2cedbd221d7cb2c24f7f90d54ab3e3d79bdf929", install = T)
 
 # Get ACS data for num buildings by census tract
-acsData <- get_acs(geography = "tract", state = "MD", county = "Baltimore city",
+acs_ct <- get_acs(geography = "tract", state = "MD", county = "Baltimore city",
                    variables = c(housing_units = "B25001_001"), 
                    year = 2024, geometry = T, survey = "acs5")
 
-acsData <- st_transform(acsData, 4326)
+acs_ct <- st_transform(acs_ct, 4326)
 
-st_crs(acsData)
+st_crs(acs_ct)
 
-acs_vacant_per_1k_blds <- acsData %>% 
-  mutate(vacant_num = lengths(st_intersects(acsData, vbnCityData)),
+acs_vacant_per_1k_blds <- acs_ct %>% 
+  mutate(vacant_num = lengths(st_intersects(acs_ct, vbnCityData)),
          vacant_per_1k_bldg = round(vacant_num / estimate * 1000))
 
 # Mapping census tract to CSA
@@ -84,7 +88,28 @@ acs_to_csa <- left_join(acs_vacant_per_1k_blds, tract_to_csa,
            T ~ 5
          ))
 
+# Num Responses by CSA as tibble
+n_responses_bas24 <- bas24 %>% group_by(bas24_svy_csaid) %>% count() %>% 
+  rename(n_bas24 = n)
+n_responses_bas25 <- bas25 %>% group_by(bas25_svy_csaid) %>% count() %>% 
+  rename(n_bas25 = n)
 
+n_responses <- full_join(n_responses_bas24, n_responses_bas25, 
+                         join_by(bas24_svy_csaid == bas25_svy_csaid))
+
+# sum(n_responses$n_bas24)
+# sum(n_responses$n_bas25)
+
+# Merge to acs_to_csa object to get spatial component
+acs_to_csa2 <- full_join(acs_to_csa, n_responses, 
+                         join_by(Community_Statistical_Area_2020 == 
+                                  bas24_svy_csaid)) %>% 
+  full_join(., csa_pop_count, 
+            join_by(Community_Statistical_Area_2020 == CSA2010))
+
+acs_to_csa_final <- acs_to_csa2 %>% 
+  mutate(n_per_1k_bas24 = round(n_bas24/tpop20*1000,2),
+         n_per_1k_bas25 = round(n_bas25/tpop20*1000,2))
 ```
 
 ## Baseplot of VBN's as points
@@ -101,7 +126,7 @@ tm_shape(osm_tiles) +
   tm_shape(csaBoundaries) +
   tm_polygons(fill_alpha = 0.6) +
   tm_shape(vbnCityData) +
-  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.02)
+  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.05)
 ```
 
 ## VBN's per 1000 buildings
@@ -164,8 +189,46 @@ vac_bldg25 <- ggplot(data = bas25_vac_bldg,
 
 gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```
-## BAS 24 and 25 responses by CSA
 
+
+## BAS 24 and 25 Total Responses per CSA
+NOTE: Response rate by CSA? Do we have that info?
+```{r}
+#| label: Number and Rate Responses by CSA
+
+# QUESTION: Does 21CCI have number of responses mailed to each CSA, to review 
+# response rate by CSA??? 
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_title("Num Responses per CSA BAS24") +
+  tm_shape(acs_to_csa_final) +
+  tm_polygons(fill = "n_bas24",
+              fill.scale = tm_scale(),
+              fill_alpha = 0.75)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_title("Rate/1000 Responses per CSA BAS24") +
+  tm_shape(acs_to_csa_final) +
+  tm_polygons(fill = "n_per_1k_bas24",
+              fill_alpha = 0.75)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_title("Num Responses per CSA BAS25") +
+  tm_shape(acs_to_csa_final) +
+  tm_polygons(fill = "n_bas25",
+              fill.scale = tm_scale(),
+              fill_alpha = 0.75)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_title("Rate/1000 Responses per CSA BAS25") +
+  tm_shape(acs_to_csa_final) +
+  tm_polygons(fill = "n_per_1k_bas25",
+              fill_alpha = 0.75)
+```
 
 
 ## Distribution of VBN's per 1000 buildings stratified by Vacant Building Sentiment Response: 24 25
