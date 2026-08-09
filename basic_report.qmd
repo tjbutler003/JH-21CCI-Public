@@ -281,23 +281,25 @@ ggplot(bas25_csa_joined) +
 # section of graph
 # Even if no mismatch, how do VBN counts affect things like safety, trust in gov,
 # other survey data questions
-bas24_low_vac_big_prob <- bas24_csa_joined %>% 
-  filter(bas24_nhd_pdvbldg == "A big problem" & quartile == 1) %>% 
-  st_as_sf(.)
 
-tm_shape(osm_tiles) +
-  tm_rgb() +
-  tm_shape(bas24_low_vac_big_prob) +
-  tm_polygons()
-
-bas24_hi_vac_lo_prob <- bas24_csa_joined %>% 
-  filter(bas24_nhd_pdvbldg == "Not a problem at all" & quartile == 4) %>% 
-  st_as_sf(.)
-
-tm_shape(osm_tiles) +
-  tm_rgb() +
-  tm_shape(bas24_hi_vac_lo_prob) +
-  tm_polygons()
+# HIDE FOR NOW: Discordant CSAs
+# bas24_low_vac_big_prob <- bas24_csa_joined %>% 
+#   filter(bas24_nhd_pdvbldg == "A big problem" & quartile == 1) %>% 
+#   st_as_sf(.)
+# 
+# tm_shape(osm_tiles) +
+#   tm_rgb() +
+#   tm_shape(bas24_low_vac_big_prob) +
+#   tm_polygons()
+# 
+# bas24_hi_vac_lo_prob <- bas24_csa_joined %>% 
+#   filter(bas24_nhd_pdvbldg == "Not a problem at all" & quartile == 4) %>% 
+#   st_as_sf(.)
+# 
+# tm_shape(osm_tiles) +
+#   tm_rgb() +
+#   tm_shape(bas24_hi_vac_lo_prob) +
+#   tm_polygons()
 ```
 
 ## Discordant Values Graph
@@ -458,8 +460,8 @@ cor_vars_bas25 <- add_row(cor_vars_bas25,
 cor_vars_bas25 <- arrange(cor_vars_bas25, desc(abs(vacants_per_1k_bldgs)))
 
 
-write_xlsx(list(bas24 = cor_vars_bas24, bas25 = cor_vars_bas25),
-           "correlation_matrix_bas24_25.xlsx")
+# write_xlsx(list(bas24 = cor_vars_bas24, bas25 = cor_vars_bas25),
+#            "correlation_matrix_bas24_25.xlsx")
 ```
 
 
