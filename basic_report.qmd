@@ -51,7 +51,7 @@ bas25 <- bas25 %>%
   filter(bas25_svy_cty == "City")
 
 # Set up Census API key - already set up
-#census_api_key("b2cedbd221d7cb2c24f7f90d54ab3e3d79bdf929", install = T)
+#census_api_key("YOUR_API_KEY_HERE", install = T)
 
 # Get ACS data for num buildings by census tract
 acs_ct <- get_acs(geography = "tract", state = "MD", county = "Baltimore city",
@@ -120,17 +120,24 @@ acs_to_csa_final <- acs_to_csa2 %>%
 
 
 # NOTES: Dot density - 1 dot = X>1 buildings for example
-tm_shape(osm_tiles) +
+vbn_dot_density <-
+  tm_shape(osm_tiles) +
   tm_title("Vacant Building Notices overlaying CSAs") +
   tm_rgb() +
   tm_shape(csaBoundaries) +
   tm_polygons(fill_alpha = 0.6) +
   tm_shape(vbnCityData) +
-  tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.05)
+  tm_dots(size = 0.05, fill = "darkred", fill_alpha = 0.5)
+
+class(vbn_dot_density)
+
+tmap_save(vbn_dot_density, "vbn_dot_density.png")
 ```
 
 ## VBN's per 1000 buildings
+
 ### Using ACS 5-year 2020-2024 data for number of buildings by Census tract
+
 ### Using VBN notices from Baltimore City Open Data
 
 ```{r}
@@ -138,16 +145,23 @@ tm_shape(osm_tiles) +
 
 # Used ACS For # buildings, VBN from open baltimore for vacant building count
 
-tm_shape(osm_tiles) +
+vbns_per_1k_bldgs_census_tract <-
+  tm_shape(osm_tiles) +
   tm_rgb() +
   tm_shape(acs_vacant_per_1k_blds) +
   tm_polygons(fill = "vacant_per_1k_bldg",
               fill.scale = tm_scale(),
-              fill_alpha = 0.5)
+              fill_alpha = 0.5) 
+  
+tmap_save(vbns_per_1k_bldgs_census_tract, 
+          "vbns_per_1k_buildings_census_tract.png")
 
-tm_shape(acs_to_csa) +
+vbns_per_1k_bldgs_csa <-
+  tm_shape(acs_to_csa) +
   tm_polygons(fill_alpha = 0.6,
               fill = "vac_bldg_per_1k")
+
+tmap_save(vbns_per_1k_bldgs_csa, "vbns_per_1k_buildings_csa.png")
 ```
 
 ## BAS Sentiment Histogram
@@ -190,9 +204,10 @@ vac_bldg25 <- ggplot(data = bas25_vac_bldg,
 gridExtra::grid.arrange(vac_lot24, vac_bldg24, vac_bldg25, ncol = 3)
 ```
 
-
 ## BAS 24 and 25 Total Responses per CSA
+
 NOTE: Response rate by CSA? Do we have that info?
+
 ```{r}
 #| label: Number and Rate Responses by CSA
 
@@ -229,7 +244,6 @@ tm_shape(osm_tiles) +
   tm_polygons(fill = "n_per_1k_bas25",
               fill_alpha = 0.75)
 ```
-
 
 ## Distribution of VBN's per 1000 buildings stratified by Vacant Building Sentiment Response: 24 25
 
@@ -303,6 +317,7 @@ ggplot(bas25_csa_joined) +
 ```
 
 ## Discordant Values Graph
+
 ```{r}
 # Helpful to label # vacants in each quintile??
 bldg_sent24_vs_quartile_vbn <- bas24_csa_joined %>%
@@ -325,6 +340,7 @@ ggplot(bldg_sent25_vs_quintile_vbn,
 ```
 
 ## Correlation between VBN Metrics and Different Questions
+
 ```{r}
 #| label: Reviewing correlation between VBN Count/Quartile/Quintile and Neighborhood Safety and Cohesion questions
 
@@ -464,7 +480,6 @@ cor_vars_bas25 <- arrange(cor_vars_bas25, desc(abs(vacants_per_1k_bldgs)))
 #            "correlation_matrix_bas24_25.xlsx")
 ```
 
-
 ## Mapping the different responses: where do people live?
 
 ```{r}
@@ -487,8 +502,6 @@ tm_shape(osm_tiles) +
   tm_shape(vbnCityData) +
   tm_dots(size = 0.005, fill = "darkred", fill_alpha = 0.05)
 ```
-
-
 
 ## Demographic Cross Tabs
 
