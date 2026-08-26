@@ -224,13 +224,6 @@ tm_shape(osm_tiles) +
 
 tm_shape(osm_tiles) +
   tm_rgb() +
-  tm_title("Rate/1000 Responses per CSA BAS24") +
-  tm_shape(acs_to_csa_final) +
-  tm_polygons(fill = "n_per_1k_bas24",
-              fill_alpha = 0.75)
-
-tm_shape(osm_tiles) +
-  tm_rgb() +
   tm_title("Num Responses per CSA BAS25") +
   tm_shape(acs_to_csa_final) +
   tm_polygons(fill = "n_bas25",
@@ -239,7 +232,14 @@ tm_shape(osm_tiles) +
 
 tm_shape(osm_tiles) +
   tm_rgb() +
-  tm_title("Rate/1000 Responses per CSA BAS25") +
+  tm_title("Responses/1000 Residents by CSA BAS24") +
+  tm_shape(acs_to_csa_final) +
+  tm_polygons(fill = "n_per_1k_bas24",
+              fill_alpha = 0.75)
+
+tm_shape(osm_tiles) +
+  tm_rgb() +
+  tm_title("Responses/1000 Residents by CSA BAS25") +
   tm_shape(acs_to_csa_final) +
   tm_polygons(fill = "n_per_1k_bas25",
               fill_alpha = 0.75)

@@ -21,3 +21,11 @@ One way of looking at this as recommended by a colleague is to view VBN's per 1k
 
 ![VBNs by CSA](vbns_per_1k_buildings_csa.png)
 
+
+## Baltimore Area Survey
+The Baltimore Area Survey is managed by the Johns Hopkins 21st Century Cities Initiative. For more, see their [website](https://21cc.jhu.edu/baltimore-area-survey/).
+
+I wanted to focus in on 2 questions on the Baltimore Area Survey related to vacants: sentiments around vacant buildings and sentiments arouns vacant lots.
+
+
+
